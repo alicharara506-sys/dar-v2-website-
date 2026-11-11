@@ -4,8 +4,7 @@ import { buildImageSizes, stageImage, stages } from './build-stages.js';
 const sections = ['build', 'about', 'services', 'partners', 'contact'];
 const partners = ['DCP — British Building Materials', 'HEK.HOUSE — Innovating Your Home'];
 const tradeIcons = ['tile', 'pipe', 'electricity', 'floor-plan'];
-const tradeStages = [6, 5, 5, 0];
-const tradePins = ['tile', 'water', 'power', ''];
+const tradeStageLinks = ['#stage-interior-finishing:marble', '', '', '#stage-site'];
 const symbols = {
   upRight: '<path d="M6 18 18 6M7 6h11v11"/>',
   down: '<path d="M12 4v15m-6-6 6 6 6-6"/>',
@@ -44,7 +43,7 @@ export function renderHead(locale, siteOrigin = '') {
     ${siteOrigin ? `<link rel="canonical" href="${t(absolute(paths[locale]))}">
     <meta property="og:url" content="${t(absolute(paths[locale]))}">
     <meta property="og:image" content="${t(absolute('/villa/share.webp'))}">
-    <meta property="og:image:alt" content="${t(data.concept)}">
+    <meta property="og:image:alt" content="${t(data.shareAlt)}">
     ${locales.map(code => '<link rel="alternate" hreflang="' + code + '" href="' + t(absolute(paths[code])) + '">').join('')}
     <link rel="alternate" hreflang="x-default" href="${t(absolute('/'))}">` : ''}
     <link rel="icon" href="/dar-icon.svg" type="image/svg+xml">
@@ -64,10 +63,10 @@ function logo(locale, variant) {
   return `<a class="logo" href="${paths[locale]}" aria-label="${t(company.name)}"><img alt="" src="/brand/dar-${variant}.webp" width="128" height="56"></a>`;
 }
 
-function stagePicture(index, main = false) {
+function stagePicture(index, main = false, alt = '') {
   const { src, srcset } = stageImage(index);
   const sizes = main ? buildImageSizes : '(max-width: 700px) 94vw, (max-width: 1512px) 43vw, 650px';
-  return `<img src="${src}" srcset="${srcset}" sizes="${sizes}" alt="" width="1670" height="940"
+  return `<img src="${src}" srcset="${srcset}" sizes="${sizes}" alt="${t(alt)}" width="1670" height="940"
     ${main ? 'id="stage-poster" class="stage-frame" data-frame="0" fetchpriority="high"' : 'loading="lazy" decoding="async"'}>`;
 }
 
@@ -109,7 +108,6 @@ function renderBuild(data) {
         <div class="experience" id="experience-panel" data-stage="site">
           <figure class="build-figure">
             <div class="viewport" id="villa-viewport">
-              <div class="viewer-top"><span class="scene-label"><i aria-hidden="true"></i>${t(data.concept)}</span></div>
               ${stagePicture(0, true)}
               <p class="scroll-cue">${icon('down')}${t(data.scrollCue)}</p>
               <p class="stage-image-status" id="stage-image-status" role="status"></p>
@@ -182,14 +180,13 @@ function renderServices(data) {
       <div class="section-intro"><p class="eyebrow section-label">${t(data.services[0])}</p><h2 id="services-title">${t(data.services[1])}</h2><p>${t(data.services[2])}</p></div>
       <div class="service-grid">
         <figure class="trade-picture">
-          ${stagePicture(7)}
-          <figcaption>${t(data.concept)}</figcaption>
+          ${stagePicture(7, false, data.shareAlt)}
         </figure>
         <div class="trade-list">
           ${data.trades.map(([heading, copy], index) => `
           <article class="trade">
             <img src="/brand/${tradeIcons[index]}.webp" width="38" height="38" alt="" loading="lazy">
-            <div><h3>${t(heading)}</h3><p>${t(copy)}</p><a class="text-link" href="#stage-${stages[tradeStages[index]].id}${tradePins[index] ? ':' + tradePins[index] : ''}">${t(data.showTrade)}${icon('upRight')}</a></div>
+            <div><h3>${t(heading)}</h3><p>${t(copy)}</p>${tradeStageLinks[index] ? `<a class="text-link" href="${tradeStageLinks[index]}">${t(data.showTrade)}${icon('upRight')}</a>` : ''}</div>
           </article>`).join('')}
         </div>
       </div>

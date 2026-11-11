@@ -21,7 +21,7 @@ test('stage anchors are reversible and every locale covers all eight stages', ()
   assert.equal(stageAt(-10), 0);
   assert.equal(stageAt(10), 7);
   for (let index = 0; index < stages.length; index++) {
-    assert.match(stageImage(index).srcset, new RegExp('stage-' + (index + 1) + '-medium\\.webp 1000w'));
+    assert.match(stageImage(index).srcset, new RegExp('stage-' + (index + 1) + '-medium\\.webp(?:\\?v=[a-z-]+)? 1000w'));
   }
   for (const locale of locales) {
     assert.equal(content[locale].stages.length, stages.length);
@@ -29,8 +29,13 @@ test('stage anchors are reversible and every locale covers all eight stages', ()
     assert.match(page, /tel:\+96179004108/);
     assert.match(page, /mailto:darcontracting2026@gmail.com/);
     assert.match(page, /id="stage-poster"/);
+    assert.match(page, /href="#stage-interior-finishing:marble"/);
+    assert.doesNotMatch(page, /href="#stage-first-fix/);
     assert.doesNotMatch(page, /<canvas|id="enter-3d"/);
-    assert.match(renderHead(locale, 'https://example.test'), /rel="alternate" hreflang="x-default"/);
+    assert.doesNotMatch(page, /scene-label|AI visualization|Images générées par IA|صور مولّدة بالذكاء الاصطناعي/i);
+    const head = renderHead(locale, 'https://example.test');
+    assert.match(head, /rel="alternate" hreflang="x-default"/);
+    assert.ok(head.includes('content="' + content[locale].shareAlt + '"'));
   }
 });
 

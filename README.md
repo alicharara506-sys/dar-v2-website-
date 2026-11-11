@@ -40,7 +40,7 @@ The server applies same-origin checks, a honeypot, validation, timeouts and per-
 | `site-assets/villa/` | Three WebP sizes for each of the eight Cardboard stills, plus the share image |
 | `src/production.css` | Brand tokens, type, responsive layout and controls |
 
-For a direct stage link, use `/#stage-handover`, `/ar/#stage-first-fix:power` or `/fr/#stage-finishes:tile`. Each stage is an AI-generated concept still. The scroll position selects the visible image and the stage controls work in both directions. With reduced motion enabled, the controls select stills without moving the page.
+For a direct stage link, use `/#stage-handover`, `/ar/#stage-interior-finishing:marble` or `/fr/#stage-finishes:tile`. Each stage uses a generated still. The scroll position selects the visible image and the stage controls work in both directions. With reduced motion enabled, the controls select stills without moving the page.
 
 To replace the stage imagery, put the eight 16:9 PNGs in a folder with filenames starting `01-` through `08-`. Run `python tools/encode-stage-images.py <folder>` with Pillow installed, then `npm run build`.
 
@@ -60,5 +60,5 @@ The browser suite uses local Chrome, Chromium touch emulation and a local mock i
 
 - The supplied visual identity and DAR logo PNG exports informed the seven fixed WebP lockups. The guide’s construction icons are used for the four services.
 - Company facts and approved excerpts come from the supplied DAR company profile. Only the DCP and HEK.HOUSE artwork from the partner pages was extracted. The source profile and its confidential page are excluded from distribution.
-- The eight stills are the AI-generated images from the Cardboard project **DAR Villa — Construction Study**. The finished exterior is also used for the sharing image. The illustrated work is labeled as a concept. There is no Projects section because approved DAR project records and image rights were unavailable.
+- The stage stills originated in **DAR Villa — Construction Study**. The stage 6 still was revised for the website. The finished exterior is also used for the sharing image. There is no Projects section because approved DAR project records and image rights were unavailable.
 - Inter and Cairo are self-hosted from Fontsource under the SIL Open Font License. Copies are in `site-assets/licenses/`.

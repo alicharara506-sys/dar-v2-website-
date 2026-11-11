@@ -4,7 +4,7 @@ export const stages = [
   { id: 'ground-frame' },
   { id: 'upper-frame' },
   { id: 'infill' },
-  { id: 'first-fix', details: ['water', 'drain', 'power'] },
+  { id: 'interior-finishing', details: ['paint', 'lighting', 'marble'], imageVersion: 'interior' },
   { id: 'finishes', details: ['stone', 'tile'] },
   { id: 'handover' },
 ];
@@ -17,8 +17,10 @@ export const buildImageSizes = '(max-height: 550px) and (orientation: landscape)
 
 export function stageImage(index) {
   const path = '/villa/stage-' + (index + 1);
+  const version = stages[index]?.imageVersion;
+  const file = size => path + '-' + size + '.webp' + (version ? '?v=' + version : '');
   return {
-    src: path + '-wide.webp',
-    srcset: path + '-small.webp 640w, ' + path + '-medium.webp 1000w, ' + path + '-wide.webp 1670w',
+    src: file('wide'),
+    srcset: file('small') + ' 640w, ' + file('medium') + ' 1000w, ' + file('wide') + ' 1670w',
   };
 }

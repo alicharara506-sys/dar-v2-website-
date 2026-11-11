@@ -68,6 +68,23 @@ async function jump(page, index) {
 async function noHorizontalOverflow(page) {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
 }
+async function fillsDesktopViewer(page) {
+  const fit = await page.locator('#stage-poster').evaluate(image => {
+    const viewport = image.closest('.viewport');
+    const figure = image.closest('figure');
+    return {
+      fit: getComputedStyle(image).objectFit,
+      viewerGap: Math.abs(figure.clientWidth - viewport.clientWidth),
+      imageGap: Math.abs(viewport.clientWidth - image.clientWidth),
+      ratio: viewport.clientWidth / viewport.clientHeight,
+      railFits: document.querySelector('.stage-rail').getBoundingClientRect().bottom <= innerHeight + 1,
+    };
+  });
+  assert.equal(fit.fit, 'cover');
+  assert.ok(fit.viewerGap <= 1 && fit.imageGap <= 1, JSON.stringify(fit));
+  assert.ok(Math.abs(fit.ratio - 16 / 9) < 0.015, JSON.stringify(fit));
+  assert.ok(fit.railFits, JSON.stringify(fit));
+}
 
 try {
   const desktop = await openPage({ viewport: { width: 1440, height: 900 } });
@@ -82,6 +99,7 @@ try {
   });
   await visit(desktop);
   await photoIs(desktop, 0);
+  await fillsDesktopViewer(desktop);
   assert.equal(await desktop.locator('#villa-viewport canvas, #enter-3d').count(), 0);
   await noHorizontalOverflow(desktop);
   await desktop.keyboard.press('Tab');
@@ -117,10 +135,10 @@ try {
   await desktop.reload();
   await stageIs(desktop, 3);
   await photoIs(desktop, 3);
-  await desktop.locator('a[href="#stage-first-fix:water"]').click();
+  await desktop.locator('a[href="#stage-interior-finishing:marble"]').click();
   await stageIs(desktop, 5);
-  assert.match(await desktop.locator('#pin-description').textContent(), /Hot and cold/);
-  assert.equal(await desktop.evaluate(() => document.activeElement.dataset.detail), 'water');
+  assert.match(await desktop.locator('#pin-description').textContent(), /marble tiles/);
+  assert.equal(await desktop.evaluate(() => document.activeElement.dataset.detail), 'marble');
   await desktop.keyboard.press('Escape');
   await stageIs(desktop, 5);
   await photoIs(desktop, 5);
@@ -129,8 +147,8 @@ try {
   await desktop.locator('[data-locale][lang="fr"]').click();
   await desktop.waitForURL(url => url.pathname === '/fr/');
   await stageIs(desktop, 5);
-  assert.equal(new URL(desktop.url()).hash, '#stage-first-fix:water');
-  assert.match(await desktop.locator('#stage-title').textContent(), /plomberie/);
+  assert.equal(new URL(desktop.url()).hash, '#stage-interior-finishing:marble');
+  assert.equal(await desktop.locator('#stage-title').textContent(), 'Finitions intérieures');
   await desktop.locator('.contact-grid a[href^="tel:"]').waitFor();
   assert.equal(await desktop.locator('.contact-grid a[href^="tel:"]').getAttribute('href'), 'tel:+96179004108');
   assert.equal(await desktop.locator('.contact-grid a[href^="mailto:"]').getAttribute('href'), 'mailto:darcontracting2026@gmail.com');
@@ -165,6 +183,19 @@ try {
   }
   await desktop.close();
   console.log('Desktop stages, scroll restoration, keyboard, deep links, locale and inquiry passed.');
+
+  const shortDesktop = await openPage({ viewport: { width: 1440, height: 700 } });
+  await visit(shortDesktop, '/#stage-first-fix');
+  await stageIs(shortDesktop, 5);
+  await photoIs(shortDesktop, 5);
+  assert.equal(new URL(shortDesktop.url()).hash, '#stage-interior-finishing');
+  await fillsDesktopViewer(shortDesktop);
+  await screenshot(shortDesktop, 'desktop-short-interior-finishing');
+  await shortDesktop.setViewportSize({ width: 1440, height: 525 });
+  await jump(shortDesktop, 5);
+  await fillsDesktopViewer(shortDesktop);
+  await screenshot(shortDesktop, 'desktop-compact-interior-finishing');
+  await shortDesktop.close();
 
   const phone = await openPage(devices['Pixel 7']);
   await visit(phone);
@@ -204,13 +235,13 @@ try {
   await jump(phone, 5);
   await phone.locator('#trade-details summary').tap();
   await phone.locator('#trade-details[open]').waitFor();
-  await phone.locator('#pin-list button[data-detail="water"]').tap();
-  assert.match(await phone.locator('#pin-description').textContent(), /Hot and cold/);
+  await phone.locator('#pin-list button[data-detail="marble"]').tap();
+  assert.match(await phone.locator('#pin-description').textContent(), /marble tiles/);
   await phone.locator('#trade-details summary').tap();
   await phone.setViewportSize({ width: 844, height: 390 });
   await noHorizontalOverflow(phone);
   await jump(phone, 5);
-  await screenshot(phone, 'phone-landscape-first-fix');
+  await screenshot(phone, 'phone-landscape-interior-finishing');
   await phone.locator('.mobile-menu summary').tap();
   await phone.locator('.mobile-menu a[href="#services"]').tap();
   await phone.waitForURL('**/#services');
@@ -219,13 +250,13 @@ try {
   console.log('Mobile stages, native touch scrolling, trade details, landscape and menu passed.');
 
   const rtl = await openPage({ viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' });
-  await visit(rtl, '/ar/#stage-first-fix:power');
+  await visit(rtl, '/ar/#stage-interior-finishing:lighting');
   await stageIs(rtl, 5);
   assert.equal(await rtl.locator('html').getAttribute('dir'), 'rtl');
   assert.equal(await rtl.locator('.contact-grid bdi').first().getAttribute('dir'), 'ltr');
   await photoIs(rtl, 5);
   await noHorizontalOverflow(rtl);
-  await screenshot(rtl, 'arabic-small-first-fix');
+  await screenshot(rtl, 'arabic-small-interior-finishing');
   await rtl.locator('#stage-progress').evaluate(input => input.focus({ preventScroll: true }));
   const reducedScroll = await rtl.evaluate(() => scrollY);
   await rtl.keyboard.press('End');

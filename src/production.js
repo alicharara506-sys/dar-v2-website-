@@ -179,8 +179,10 @@ function userJump(progress) {
 function followStageHash() {
   const match = /^#stage-([a-z-]+)(?::([a-z]+))?$/.exec(location.hash);
   if (!match) return;
-  const index = stages.findIndex(stage => stage.id === match[1]);
+  const id = match[1] === 'first-fix' ? 'interior-finishing' : match[1];
+  const index = stages.findIndex(stage => stage.id === id);
   if (index < 0) return;
+  if (id !== match[1]) history.replaceState(history.state, '', '#stage-' + id);
   if (motion.matches) track.scrollIntoView({ block: 'start' });
   jump(progressAt(index));
   stageButtons[index].focus({ preventScroll: true });
