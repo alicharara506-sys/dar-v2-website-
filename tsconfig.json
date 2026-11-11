@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "allowJs": true,
+    "checkJs": true,
+    "strict": false,
+    "noUncheckedSideEffectImports": false,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": [
+    "src/build-stages.js",
+    "src/content.js",
+    "src/render-page.js",
+    "src/production.js",
+    "src/inquiry-form.js",
+    "src/villa-model.js",
+    "src/villa-renderer.js"
+  ]
+}
