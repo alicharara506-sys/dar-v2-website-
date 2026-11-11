@@ -34,17 +34,15 @@ The server applies same-origin checks, a honeypot, validation, timeouts and per-
 
 | Location | Purpose |
 | --- | --- |
-| `src/content.js` | Company facts, section copy, stage captions, hotspot text and form messages in English, Arabic and French |
-| `src/build-stages.js` | Stage identifiers, camera poses, inspection points and normalized progress |
-| `src/production.js` | Native scroll, stage controls, responsive sticky scene, touch and keyboard inspection |
-| `src/villa-model.js` | Reproducible concept geometry, site, construction groups and procedural materials |
-| `src/villa-renderer.js` | glTF loading, stage visibility and assembly, cutaway, lighting and camera |
-| `site-assets/villa/` | Model, two still sizes for each stage, and the share image |
+| `src/content.js` | Company facts, section copy, stage captions, trade details and form messages in English, Arabic and French |
+| `src/build-stages.js` | Stage identifiers, image variants and normalized progress |
+| `src/production.js` | Native scroll, image loading, stage controls and the responsive sticky viewer |
+| `site-assets/villa/` | Three WebP sizes for each of the eight Cardboard stills, plus the share image |
 | `src/production.css` | Brand tokens, type, responsive layout and controls |
 
-For a direct stage link, use `/#stage-handover`, `/ar/#stage-first-fix:power` or `/fr/#stage-finishes:tile`. The villa is an illustrative concept model. Stage choices do not define a payment schedule.
+For a direct stage link, use `/#stage-handover`, `/ar/#stage-first-fix:power` or `/fr/#stage-finishes:tile`. Each stage is an AI-generated concept still. The scroll position selects the visible image and the stage controls work in both directions. With reduced motion enabled, the controls select stills without moving the page.
 
-`npm run render:villa` regenerates the GLB and all same-model stills using local Chrome and the Three.js exporter. Follow it with `npm run build` to copy updated assets into `dist/`.
+To replace the stage imagery, put the eight 16:9 PNGs in a folder with filenames starting `01-` through `08-`. Run `python tools/encode-stage-images.py <folder>` with Pillow installed, then `npm run build`.
 
 ## Verify
 
@@ -56,11 +54,11 @@ npm run build
 npm run test:browser
 ```
 
-The browser suite uses local Chrome, Chromium touch emulation and a local mock inquiry relay. Set `DAR_QA_DIR` to retain stage screenshots. The asset renderer uses port 4317 and browser verification uses port 4327.
+The browser suite uses local Chrome, Chromium touch emulation and a local mock inquiry relay. Set `DAR_QA_DIR` to retain stage screenshots. Browser verification uses port 4327.
 
 ## Asset provenance
 
 - The supplied visual identity and DAR logo PNG exports informed the seven fixed WebP lockups. The guide’s construction icons are used for the four services.
 - Company facts and approved excerpts come from the supplied DAR company profile. Only the DCP and HEK.HOUSE artwork from the partner pages was extracted. The source profile and its confidential page are excluded from distribution.
-- The villa, textures, stills and share image were generated for this website. The illustrated work is labeled as a concept. There is no Projects section because approved DAR project records and image rights were unavailable.
-- Inter and Cairo are self-hosted from Fontsource under the SIL Open Font License. Three.js is used under the MIT License. Copies are in `site-assets/licenses/`.
+- The eight stills are the AI-generated images from the Cardboard project **DAR Villa — Construction Study**. The finished exterior is also used for the sharing image. The illustrated work is labeled as a concept. There is no Projects section because approved DAR project records and image rights were unavailable.
+- Inter and Cairo are self-hosted from Fontsource under the SIL Open Font License. Copies are in `site-assets/licenses/`.

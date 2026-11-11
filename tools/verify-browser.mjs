@@ -38,14 +38,9 @@ const server = spawn(process.execPath, ['server/start.mjs'], {
 const [message] = await once(server.stdout, 'data');
 assert.match(String(message), /listening on port 4327/);
 
-const browser = await chromium.launch({
-  channel: 'chrome',
-  args: ['--enable-webgl', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
-});
+const browser = await chromium.launch({ channel: 'chrome' });
 const panel = '#experience-panel';
-const live = panel + '[data-mode="live"]';
 const stageJump = index => '[data-stage-jump="' + index + '"]';
-const frame = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)))));
 const screenshot = (page, name) => screenshots ? page.screenshot({ path: resolve(screenshots, name + '.png'), scale: 'css' }) : undefined;
 const openPage = async options => (await browser.newContext(options)).newPage();
 
@@ -59,10 +54,16 @@ async function stageIs(page, index) {
   await page.locator(panel + '[data-stage="' + stages[index].id + '"]').waitFor();
   assert.equal(await page.locator(stageJump(index)).getAttribute('aria-current'), 'step');
 }
+async function photoIs(page, index) {
+  const image = page.locator('#villa-viewport[data-image-state="ready"] #stage-poster[data-frame="' + index + '"]');
+  await image.waitFor();
+  await image.evaluate(img => img.decode());
+  assert.match(await image.evaluate(img => img.currentSrc), new RegExp('/villa/stage-' + (index + 1) + '-'));
+}
 async function jump(page, index) {
   await page.locator(stageJump(index)).click();
   await stageIs(page, index);
-  await frame(page);
+  await photoIs(page, index);
 }
 async function noHorizontalOverflow(page) {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
@@ -71,6 +72,8 @@ async function noHorizontalOverflow(page) {
 try {
   const desktop = await openPage({ viewport: { width: 1440, height: 900 } });
   const problems = [];
+  const modelRequests = [];
+  desktop.on('request', request => { if (request.url().endsWith('.glb')) modelRequests.push(request.url()); });
   desktop.on('pageerror', error => problems.push(error.message));
   desktop.on('console', entry => {
     if (entry.type() !== 'error') return;
@@ -78,7 +81,8 @@ try {
     if (!expectedRejection) problems.push(entry.text());
   });
   await visit(desktop);
-  await desktop.locator(live).waitFor({ timeout: 30000 });
+  await photoIs(desktop, 0);
+  assert.equal(await desktop.locator('#villa-viewport canvas, #enter-3d').count(), 0);
   await noHorizontalOverflow(desktop);
   await desktop.keyboard.press('Tab');
   assert.equal(await desktop.locator('a.skip').evaluate(element => element === document.activeElement), true);
@@ -104,23 +108,23 @@ try {
   await stageIs(desktop, 5);
   await desktop.evaluate(y => window.scrollTo(0, y), finishY + 25);
   await stageIs(desktop, 7);
+  await photoIs(desktop, 7);
+  await desktop.locator('#handover-cta').waitFor();
   await desktop.evaluate(() => window.scrollTo(0, 1));
   await stageIs(desktop, 0);
+  await photoIs(desktop, 0);
   await jump(desktop, 3);
   await desktop.reload();
-  await desktop.locator(live).waitFor();
   await stageIs(desktop, 3);
+  await photoIs(desktop, 3);
   await desktop.locator('a[href="#stage-first-fix:water"]').click();
   await stageIs(desktop, 5);
   assert.match(await desktop.locator('#pin-description').textContent(), /Hot and cold/);
-  await desktop.locator('#enter-3d').click();
-  assert.equal(await desktop.evaluate(() => document.activeElement.id), 'villa-viewport');
-  await desktop.keyboard.press('ArrowLeft');
-  await desktop.keyboard.press('+');
+  assert.equal(await desktop.evaluate(() => document.activeElement.dataset.detail), 'water');
   await desktop.keyboard.press('Escape');
   await stageIs(desktop, 5);
-  await desktop.locator(live).waitFor();
-  assert.equal(await desktop.evaluate(() => document.activeElement.id), 'enter-3d');
+  await photoIs(desktop, 5);
+  assert.equal(await desktop.locator('#trade-details').getAttribute('open'), null);
   await desktop.locator('.language summary').click();
   await desktop.locator('[data-locale][lang="fr"]').click();
   await desktop.waitForURL(url => url.pathname === '/fr/');
@@ -152,6 +156,7 @@ try {
   const audit = await new AxeBuilder({ page: desktop }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   assert.deepEqual(audit.violations.map(item => ({ rule: item.id, nodes: item.nodes.map(node => node.target) })), []);
   assert.deepEqual(problems, []);
+  assert.deepEqual(modelRequests, []);
   if (screenshots) {
     for (const id of ['about', 'services', 'partners', 'contact']) {
       if (id === 'services') await desktop.locator('.trade-picture img').evaluate(image => image.decode());
@@ -163,7 +168,7 @@ try {
 
   const phone = await openPage(devices['Pixel 7']);
   await visit(phone);
-  await phone.locator(live).waitFor({ timeout: 30000 });
+  await photoIs(phone, 0);
   await noHorizontalOverflow(phone);
   await screenshot(phone, 'phone-hero');
   for (let index = 0; index < stages.length; index++) {
@@ -171,29 +176,37 @@ try {
     await screenshot(phone, 'phone-stage-' + (index + 1));
   }
   await jump(phone, 5);
-  await phone.locator('#enter-3d').tap();
   const viewport = phone.locator('#villa-viewport');
-  const before = await viewport.screenshot({ scale: 'css' });
   const box = await viewport.boundingBox();
-  const center = { x: Math.round(box.x + box.width * 0.5), y: Math.round(box.y + box.height * 0.51) };
+  const x = Math.round(box.x + box.width * 0.5);
+  const y = Math.round(box.y + box.height * 0.75);
   const initialScroll = await phone.evaluate(() => scrollY);
   const cdp = await phone.context().newCDPSession(phone);
   const touch = (type, touchPoints) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints });
-  await touch('touchStart', [{ id: 1, ...center }]);
-  await touch('touchMove', [{ id: 1, x: center.x + 55, y: center.y + 20 }]);
+  await touch('touchStart', [{ id: 1, x, y }]);
+  await touch('touchMove', [{ id: 1, x, y: y - 60 }]);
+  await touch('touchMove', [{ id: 1, x, y: y - 145 }]);
   await touch('touchEnd', []);
-  await touch('touchStart', [{ id: 1, x: center.x - 28, y: center.y }, { id: 2, x: center.x + 28, y: center.y }]);
-  await touch('touchMove', [{ id: 1, x: center.x - 51, y: center.y }, { id: 2, x: center.x + 51, y: center.y }]);
-  await touch('touchEnd', []);
-  await frame(phone);
-  assert.equal(await phone.evaluate(() => scrollY), initialScroll);
-  assert.notDeepEqual(await viewport.screenshot({ scale: 'css' }), before);
-  await phone.locator('#reset-3d').tap();
-  await phone.locator('.pin[data-pin="water"]').tap();
+  await phone.waitForFunction(start => scrollY > start + 10, initialScroll);
+  await phone.evaluate(() => new Promise(resolve => {
+    let position = scrollY;
+    let lastMove = performance.now();
+    function check(now) {
+      if (position !== scrollY) {
+        position = scrollY;
+        lastMove = now;
+      }
+      if (now - lastMove >= 160) resolve();
+      else requestAnimationFrame(check);
+    }
+    requestAnimationFrame(check);
+  }));
+  await jump(phone, 5);
+  await phone.locator('#trade-details summary').tap();
+  await phone.locator('#trade-details[open]').waitFor();
+  await phone.locator('#pin-list button[data-detail="water"]').tap();
   assert.match(await phone.locator('#pin-description').textContent(), /Hot and cold/);
-  await phone.locator('#exit-3d').tap();
-  await stageIs(phone, 5);
-  await phone.locator(live).waitFor();
+  await phone.locator('#trade-details summary').tap();
   await phone.setViewportSize({ width: 844, height: 390 });
   await noHorizontalOverflow(phone);
   await jump(phone, 5);
@@ -203,55 +216,56 @@ try {
   await phone.waitForURL('**/#services');
   assert.equal(await phone.locator('.mobile-menu').getAttribute('open'), null);
   await phone.close();
-  console.log('Mobile emulation stages, touch orbit and pinch, hotspot, exit, landscape and menu passed.');
+  console.log('Mobile stages, native touch scrolling, trade details, landscape and menu passed.');
 
   const rtl = await openPage({ viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' });
-  const modelRequests = [];
-  rtl.on('request', request => { if (request.url().endsWith('.glb')) modelRequests.push(request.url()); });
   await visit(rtl, '/ar/#stage-first-fix:power');
   await stageIs(rtl, 5);
   assert.equal(await rtl.locator('html').getAttribute('dir'), 'rtl');
   assert.equal(await rtl.locator('.contact-grid bdi').first().getAttribute('dir'), 'ltr');
-  assert.equal(await rtl.locator(panel).getAttribute('data-mode'), 'still');
-  assert.equal(modelRequests.length, 0);
+  await photoIs(rtl, 5);
   await noHorizontalOverflow(rtl);
   await screenshot(rtl, 'arabic-small-first-fix');
-  await jump(rtl, 7);
-  await jump(rtl, 0);
+  await rtl.locator('#stage-progress').evaluate(input => input.focus({ preventScroll: true }));
+  const reducedScroll = await rtl.evaluate(() => scrollY);
+  await rtl.keyboard.press('End');
+  await photoIs(rtl, 7);
+  await rtl.keyboard.press('Home');
+  await photoIs(rtl, 0);
+  assert.equal(await rtl.evaluate(() => scrollY), reducedScroll);
   const rtlAudit = await new AxeBuilder({ page: rtl }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   assert.deepEqual(rtlAudit.violations.map(item => ({ rule: item.id, nodes: item.nodes.map(node => node.target) })), []);
   await rtl.close();
 
-  for (const failure of ['missing-model', 'webgl-unavailable', 'context-loss']) {
-    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-    if (failure === 'missing-model') await page.route('**/*.glb', route => route.fulfill({ status: 404 }));
-    if (failure === 'webgl-unavailable') await page.addInitScript(() => {
-      const getContext = HTMLCanvasElement.prototype.getContext;
-      HTMLCanvasElement.prototype.getContext = function (type, ...args) {
-        return type.includes('webgl') ? null : getContext.call(this, type, ...args);
-      };
-    });
-    await visit(page, '/#stage-infill');
-    await stageIs(page, 4);
-    if (failure === 'context-loss') {
-      await page.locator(live).waitFor();
-      await page.evaluate(() => {
-        const context = document.querySelector('canvas').getContext('webgl2');
-        context.getExtension('WEBGL_lose_context').loseContext();
-      });
-    }
-    await page.locator('#still-status').waitFor();
-    assert.equal(await page.locator(panel).getAttribute('data-mode'), 'still');
-    assert.equal(await page.locator('#stage-poster img').getAttribute('src'), '/villa/stage-5-wide.webp');
-    await jump(page, 6);
-    assert.equal(await page.locator('#stage-poster img').getAttribute('src'), '/villa/stage-7-wide.webp');
-    await page.close();
-  }
-  console.log('Reduced motion, 320px Arabic RTL, axe checks and three graphics failures passed.');
+  const slow = await openPage({ viewport: { width: 1280, height: 800 } });
+  let release;
+  const delayed = new Promise(resolve => { release = resolve; });
+  await slow.route('**/villa/stage-4-*.webp', async route => {
+    await delayed;
+    await route.continue();
+  });
+  await slow.route('**/villa/stage-5-*.webp', route => route.fulfill({ status: 404 }));
+  await visit(slow);
+  await slow.locator(stageJump(3)).click();
+  await stageIs(slow, 3);
+  await slow.locator('#villa-viewport[data-image-state="loading"]').waitFor();
+  await jump(slow, 7);
+  const delayedResponse = slow.waitForResponse(response => /stage-4-/.test(response.url()));
+  release();
+  await delayedResponse;
+  await stageIs(slow, 7);
+  await photoIs(slow, 7);
+  await slow.locator(stageJump(4)).click();
+  await stageIs(slow, 4);
+  await slow.getByText('Stage image unavailable.', { exact: true }).waitFor();
+  await jump(slow, 6);
+  await slow.close();
+  console.log('Reduced motion, 320px Arabic RTL, accessibility, delayed frames and missing images passed.');
 
   const noJs = await browser.newPage({ javaScriptEnabled: false });
   assert.equal((await noJs.goto(base + '/ar/')).status(), 200);
   assert.equal(await noJs.locator('html').getAttribute('lang'), 'ar');
+  assert.ok(await noJs.locator('#stage-poster').evaluate(img => img.naturalWidth > 0));
   await noJs.locator('#services-title').waitFor({ state: 'visible' });
   assert.equal(await noJs.locator('.contact-grid a[href^="mailto:"]').count(), 1);
   await noJs.close();

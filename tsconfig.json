@@ -16,8 +16,6 @@
     "src/content.js",
     "src/render-page.js",
     "src/production.js",
-    "src/inquiry-form.js",
-    "src/villa-model.js",
-    "src/villa-renderer.js"
+    "src/inquiry-form.js"
   ]
 }

@@ -10,7 +10,6 @@
     "preview": "node server/start.mjs",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "render:villa": "node tools/render-villa.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:browser": "node tools/verify-browser.mjs"
   },
@@ -19,14 +18,12 @@
   },
   "dependencies": {
     "@fontsource-variable/cairo": "5.3.0",
-    "@fontsource-variable/inter": "5.3.0",
-    "three": "^0.170.0"
+    "@fontsource-variable/inter": "5.3.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
     "@eslint/js": "9.39.5",
     "@types/node": "22.20.5",
-    "@types/three": "0.170.0",
     "eslint": "9.39.5",
     "globals": "17.14.0",
     "playwright": "1.65.0",

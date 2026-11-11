@@ -1,5 +1,5 @@
 import { company, content, localeNames, locales, paths } from './content.js';
-import { hotspots, stages } from './build-stages.js';
+import { buildImageSizes, stageImage, stages } from './build-stages.js';
 
 const sections = ['build', 'about', 'services', 'partners', 'contact'];
 const partners = ['DCP — British Building Materials', 'HEK.HOUSE — Innovating Your Home'];
@@ -11,7 +11,6 @@ const symbols = {
   down: '<path d="M12 4v15m-6-6 6 6 6-6"/>',
   prev: '<path d="m14 6-6 6 6 6"/>',
   next: '<path d="m10 6 6 6-6 6"/>',
-  cube: '<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Zm0 9 8-4.5m-8 4.5-8-4.5m8 4.5v9"/>',
   globe: '<circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4a15 15 0 0 1 0 16 15 15 0 0 1 0-16Z"/>',
   menu: '<path d="M4 8h16M4 16h16"/>',
   plus: '<path d="M5 12h14m-7-7v14"/>',
@@ -27,6 +26,7 @@ const t = escape;
 
 export function renderHead(locale, siteOrigin = '') {
   const data = content[locale];
+  const firstFrame = stageImage(0);
   const title = company.name + ' | ' + data.location;
   const absolute = path => siteOrigin + path;
   const ogLocale = { en: 'en_US', ar: 'ar_LB', fr: 'fr_FR' };
@@ -48,8 +48,7 @@ export function renderHead(locale, siteOrigin = '') {
     ${locales.map(code => '<link rel="alternate" hreflang="' + code + '" href="' + t(absolute(paths[code])) + '">').join('')}
     <link rel="alternate" hreflang="x-default" href="${t(absolute('/'))}">` : ''}
     <link rel="icon" href="/dar-icon.svg" type="image/svg+xml">
-    <link rel="preload" as="image" href="/villa/stage-1-small.webp" media="(max-width: 660px)" fetchpriority="high">
-    <link rel="preload" as="image" href="/villa/stage-1-wide.webp" media="(min-width: 661px)" fetchpriority="high">
+    <link rel="preload" as="image" imagesrcset="${firstFrame.srcset}" imagesizes="${buildImageSizes}" fetchpriority="high">
     <script type="application/ld+json">${JSON.stringify({
       '@context': 'https://schema.org',
       '@type': 'GeneralContractor',
@@ -66,11 +65,10 @@ function logo(locale, variant) {
 }
 
 function stagePicture(index, main = false) {
-  const number = index + 1;
-  return `<picture${main ? ' id="stage-poster"' : ''}>
-    <source media="(max-width: 660px)" srcset="/villa/stage-${number}-small.webp">
-    <img src="/villa/stage-${number}-wide.webp" alt="" width="1280" height="760" ${main ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"'}>
-  </picture>`;
+  const { src, srcset } = stageImage(index);
+  const sizes = main ? buildImageSizes : '(max-width: 700px) 94vw, (max-width: 1512px) 43vw, 650px';
+  return `<img src="${src}" srcset="${srcset}" sizes="${sizes}" alt="" width="1670" height="940"
+    ${main ? 'id="stage-poster" class="stage-frame" data-frame="0" fetchpriority="high"' : 'loading="lazy" decoding="async"'}>`;
 }
 
 function renderHeader(locale, data) {
@@ -108,19 +106,13 @@ function renderBuild(data) {
         <p class="signoff">${t(data.signoff)}</p>
       </div>
       <div class="experience-track" id="experience">
-        <div class="experience" id="experience-panel" data-mode="still" data-stage="site">
+        <div class="experience" id="experience-panel" data-stage="site">
           <figure class="build-figure">
             <div class="viewport" id="villa-viewport">
               <div class="viewer-top"><span class="scene-label"><i aria-hidden="true"></i>${t(data.concept)}</span></div>
               ${stagePicture(0, true)}
-              <canvas aria-hidden="true"></canvas>
-              <div class="pins" id="pins">${hotspots.map((pin, index) => `<button class="pin" type="button" data-pin="${pin.id}" tabindex="-1" aria-label="${t(data.pins[pin.id][0])}" hidden>${index + 1}</button>`).join('')}</div>
-              <div class="viewport-buttons">
-                <span id="still-status" class="still-status" hidden>${t(data.fallback)}</span>
-                <button class="button viewer-button" id="enter-3d" type="button" hidden>${icon('cube')}${t(data.live)}</button>
-                <button class="button viewer-button" id="reset-3d" type="button" hidden>${t(data.reset)}</button>
-                <button class="button viewer-button" id="exit-3d" type="button" hidden>${t(data.exit)}</button>
-              </div>
+              <p class="scroll-cue">${icon('down')}${t(data.scrollCue)}</p>
+              <p class="stage-image-status" id="stage-image-status" role="status"></p>
             </div>
             <figcaption class="stage-caption">
               <div class="stage-copy" aria-live="polite" aria-atomic="true">
@@ -134,7 +126,6 @@ function renderBuild(data) {
               </div>
             </figcaption>
           </figure>
-          <p class="sr-only" id="gesture-help">${t(data.gestures)}</p>
           <details class="trade-details" id="trade-details" hidden>
             <summary>${t(data.details)}</summary>
             <div class="trade-popover">

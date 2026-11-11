@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { test } from 'node:test';
 import { content, locales } from '../src/content.js';
-import { progressAt, reveal, stageAt, stages } from '../src/build-stages.js';
+import { progressAt, stageAt, stageImage, stages } from '../src/build-stages.js';
 import { renderHead, renderPage } from '../src/render-page.js';
 import { inquiryHandler, validateInquiry } from '../server/inquiry.mjs';
 
@@ -20,13 +20,16 @@ test('stage anchors are reversible and every locale covers all eight stages', ()
   for (let index = 0; index < stages.length; index++) assert.equal(stageAt(progressAt(index)), index);
   assert.equal(stageAt(-10), 0);
   assert.equal(stageAt(10), 7);
-  assert.equal(reveal(3, 2, 3), 1);
-  assert.equal(reveal(1, 2, 3), 0);
+  for (let index = 0; index < stages.length; index++) {
+    assert.match(stageImage(index).srcset, new RegExp('stage-' + (index + 1) + '-medium\\.webp 1000w'));
+  }
   for (const locale of locales) {
     assert.equal(content[locale].stages.length, stages.length);
     const page = renderPage(locale);
     assert.match(page, /tel:\+96179004108/);
     assert.match(page, /mailto:darcontracting2026@gmail.com/);
+    assert.match(page, /id="stage-poster"/);
+    assert.doesNotMatch(page, /<canvas|id="enter-3d"/);
     assert.match(renderHead(locale, 'https://example.test'), /rel="alternate" hreflang="x-default"/);
   }
 });
