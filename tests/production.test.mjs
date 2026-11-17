@@ -6,6 +6,7 @@ import { content, locales } from '../src/content.js';
 import { progressAt, stageAt, stageImage, stages } from '../src/build-stages.js';
 import { renderHead, renderPage } from '../src/render-page.js';
 import { inquiryHandler, validateInquiry } from '../server/inquiry.mjs';
+import { serviceRoutes, serviceRoute } from '../src/service-pages.js';
 
 const data = { name: 'Test Visitor', reply: '+961 79 123 456', project: '0', location: 'Beirut', description: 'Synthetic villa inquiry.', website: '', locale: 'fr' };
 
@@ -29,7 +30,7 @@ test('stage anchors are reversible and every locale covers all eight stages', ()
     assert.match(page, /tel:\+96179004108/);
     assert.match(page, /mailto:darcontracting2026@gmail.com/);
     assert.match(page, /id="stage-poster"/);
-    assert.match(page, /href="#stage-interior-finishing:marble"/);
+    assert.match(page, /services\/finishing\//);
     assert.doesNotMatch(page, /href="#stage-first-fix/);
     assert.doesNotMatch(page, /<canvas|id="enter-3d"/);
     assert.doesNotMatch(page, /scene-label|AI visualization|Images générées par IA|صور مولّدة بالذكاء الاصطناعي/i);
@@ -37,6 +38,23 @@ test('stage anchors are reversible and every locale covers all eight stages', ()
     assert.match(head, /rel="alternate" hreflang="x-default"/);
     assert.ok(head.includes('content="' + content[locale].shareAlt + '"'));
   }
+});
+
+test('each service is rendered and linked in all three languages', () => {
+  const routes=serviceRoutes();
+  assert.equal(routes.length,15);
+  for(const route of routes) {
+    assert.deepEqual(serviceRoute(route.path),{locale:route.locale,key:route.key});
+    const html=renderPage(route.locale,route.key);
+    assert.match(html,/class="service-page"/);
+    assert.equal((html.match(/<h1/g)||[]).length,1);
+    assert.equal((html.match(/<details>/g)||[]).length,3);
+    assert.match(html,/tel:\+96179004108/);
+    assert.doesNotMatch(html,/id="experience"/);
+    const head=renderHead(route.locale,'https://example.test',route.key);
+    assert.ok(head.includes('https://example.test'+route.path));
+  }
+  assert.equal(serviceRoute('/services/unknown/'),null);
 });
 
 test('validates and normalizes inquiry data without accepting malformed fields', () => {

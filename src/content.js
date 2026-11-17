@@ -1,3 +1,4 @@
+import { newStageCopy } from './experience-content.js';
 export const locales = ['en', 'ar', 'fr'];
 export const localeNames = { en: 'English', ar: 'العربية', fr: 'Français' };
 export const paths = { en: '/', ar: '/ar/', fr: '/fr/' };
@@ -203,3 +204,5 @@ export const content = {
     },
   },
 };
+
+for (const locale of locales) content[locale].stages = newStageCopy[locale];

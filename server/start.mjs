@@ -51,7 +51,11 @@ const server = createServer({ requestTimeout: 20000, headersTimeout: 10000 }, as
       response.writeHead(308, { Location: path + '/' + url.search }).end();
       return;
     }
-    const pagePath = ['/', '/ar/', '/fr/'].includes(path) ? path + 'index.html' : path;
+    if (/^\/(?:ar\/|fr\/)?services\/[a-z-]+$/.test(path)) {
+      response.writeHead(308, { Location: path + '/' + url.search }).end();
+      return;
+    }
+    const pagePath = path.endsWith('/') ? path + 'index.html' : path;
     const file = resolve(root, '.' + pagePath);
     const type = contentTypes[extname(file)];
     if (!file.startsWith(root + sep) || !type || /[\0\\]/.test(path)) {

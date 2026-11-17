@@ -1,0 +1,18 @@
+import { chromium } from 'playwright';
+import { mkdir } from 'node:fs/promises';
+await mkdir('../../outputs/DAR Website Preview',{recursive:true});
+const browser=await chromium.launch({channel:'msedge',headless:true,args:['--enable-webgl','--use-angle=swiftshader']});
+const page=await browser.newPage({viewport:{width:1400,height:1000},deviceScaleFactor:1});
+page.on('pageerror',e=>console.log('PAGE ERROR',e.message));
+await page.goto('http://127.0.0.1:3220/tools/scene-capture.html');
+await page.waitForFunction(()=>window.scene);
+await page.evaluate(()=>window.scene.setStage(7));
+await page.waitForTimeout(300);
+await page.screenshot({path:'../../outputs/DAR Website Preview/3D handover.png'});
+await page.goto('http://127.0.0.1:3220/');
+await page.waitForTimeout(600);
+await page.screenshot({path:'../../outputs/DAR Website Preview/Desktop homepage.png',fullPage:false});
+await page.setViewportSize({width:390,height:844});
+await page.screenshot({path:'../../outputs/DAR Website Preview/Mobile homepage.png',fullPage:false});
+console.log('Hero overflow',await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth})));
+await browser.close();

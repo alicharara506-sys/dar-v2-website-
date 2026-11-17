@@ -4,21 +4,23 @@ import { promisify } from 'node:util';
 import { brotliCompress, constants, gzip } from 'node:zlib';
 import { renderHead, renderPage } from '../src/render-page.js';
 import { locales } from '../src/content.js';
+import { serviceRoutes } from '../src/service-pages.js';
 
 const origin = process.env.DAR_SITE_URL ? new URL(process.env.DAR_SITE_URL).origin : '';
 const dist = new URL('../dist/', import.meta.url);
 const template = await readFile(new URL('index.html', dist), 'utf8');
-for (const locale of locales) {
-  const target = locale === 'en' ? dist : new URL(locale + '/', dist);
+const routes = [...locales.map(locale => ({locale, key:'', path: locale === 'en' ? '/' : '/'+locale+'/'})), ...serviceRoutes()];
+for (const {locale, key, path} of routes) {
+  const target = new URL('.' + path, dist);
   await mkdir(target, { recursive: true });
   const html = template
     .replace(/<html lang="en" dir="ltr">/, '<html lang="' + locale + '" dir="' + (locale === 'ar' ? 'rtl' : 'ltr') + '">')
-    .replace(/<!-- DAR HEAD -->[\s\S]*?<!-- \/DAR HEAD -->/, () => renderHead(locale, origin))
-    .replace(/<!-- DAR PAGE -->[\s\S]*?<!-- \/DAR PAGE -->/, () => renderPage(locale));
+    .replace(/<!-- DAR HEAD -->[\s\S]*?<!-- \/DAR HEAD -->/, () => renderHead(locale, origin, key))
+    .replace(/<!-- DAR PAGE -->[\s\S]*?<!-- \/DAR PAGE -->/, () => renderPage(locale, key));
   await writeFile(new URL('index.html', target), html);
 }
 if (origin) {
-  const items = locales.map(locale => '<url><loc>' + origin + (locale === 'en' ? '/' : '/' + locale + '/') + '</loc></url>');
+  const items = routes.map(({path}) => '<url><loc>' + origin + path + '</loc></url>');
   await writeFile(new URL('sitemap.xml', dist), '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + items.join('') + '</urlset>\n');
   await writeFile(new URL('robots.txt', dist), 'User-agent: *\nAllow: /\nSitemap: ' + origin + '/sitemap.xml\n');
 }
